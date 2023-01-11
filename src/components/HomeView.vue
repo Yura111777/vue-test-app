@@ -1,42 +1,59 @@
 <template>
   <HeaderView />
-  <ul v-if="list.length">
-    <li>
-      <input
-        type="text"
-        v-model="search"
-        @input="listShow"
-        placeholder="Search on title"
-      />
-    </li>
-    <li v-for="item in collections" :key="item.id">
-      <h2 class="title">{{ item.title }}</h2>
-      <p class="text">
-        {{ item.body }}
-      </p>
-      <span class="comments">Comments: {{ item.quantity }}</span>
-    </li>
-    <li v-if="!search.length">
-      <button
-        :class="[i === 0 ? 'act btn' : 'btn']"
-        :key="i"
-        v-for="(p, i) in listPagination.pages"
-        @click="setPage(p, $event)"
+  <div class="flex container">
+    <ul v-if="list.length">
+      <li>
+        <input
+          type="text"
+          v-model="search"
+          @input="listShow"
+          placeholder="Search on title"
+        />
+      </li>
+      <li
+        v-for="item in collections"
+        :key="item.id"
+        @click="loadChart(item.quantity)"
       >
-        {{ p }}
-      </button>
-    </li>
-  </ul>
+        <h2 class="title">{{ item.title }}</h2>
+        <p class="text">
+          {{ item.body }}
+        </p>
+        <span class="comments">Comments: {{ item.quantity.length }}</span>
+      </li>
+      <li v-if="!search.length">
+        <button
+          :class="[i === 0 ? 'act btn' : 'btn']"
+          :key="i"
+          v-for="(p, i) in listPagination.pages"
+          @click="setPage(p, $event)"
+        >
+          {{ p }}
+        </button>
+      </li>
+    </ul>
+    <div style="height: 500px">
+      <h2 class="chart-title">
+        Please click on list item to change chart data
+      </h2>
+      <Pie :data="chartData" :options="options" />
+    </div>
+  </div>
 </template>
 
 <script>
 import HeaderView from "@/components/HeaderView";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Pie } from "vue-chartjs";
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 import _ from "lodash";
 import axios from "axios";
 export default {
   name: "HomeView",
   components: {
     HeaderView,
+    Pie,
   },
   data() {
     return {
@@ -46,9 +63,57 @@ export default {
       collections: [],
       search: "",
       comments: "",
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+      data: {
+        labels: ["VueJs", "EmberJs", "ReactJs", "AngularJs"],
+        datasets: [
+          {
+            backgroundColor: [
+              "#41B883",
+              "#E46651",
+              "#00D8FF",
+              "#DD1B16",
+              "#f6f6f6",
+            ],
+            data: [40, 20, 80, 10],
+          },
+        ],
+      },
     };
   },
+  computed: {
+    chartData: function () {
+      return this.data;
+    },
+  },
   methods: {
+    loadChart(chart) {
+      this.data = {
+        labels: [],
+        datasets: [
+          {
+            backgroundColor: [
+              "#41B883",
+              "#E46651",
+              "#00D8FF",
+              "#DD1B16",
+              "#9c27b0",
+            ],
+            data: [],
+          },
+        ],
+      };
+
+      chart.forEach((el) => {
+        this.data.labels.push(el.name);
+        this.data.datasets[0].data.push(el.body.length);
+      });
+
+      this.$forceUpdate();
+    },
     listShow() {
       if (this.search) {
         this.collections = this.list.filter((el) =>
@@ -118,7 +183,7 @@ export default {
       let commentsQuantity = this.comments.filter(
         (com) => com.postId === el.id
       );
-      el.quantity = commentsQuantity.length;
+      el.quantity = commentsQuantity;
     });
     this.setPage(1);
   },
@@ -135,6 +200,14 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.chart-title {
+  text-align: left;
+  font-size: 16px;
+  color: lightslategray;
+}
+.flex {
+  display: flex;
+}
 .title {
   font-size: 18px;
   margin-bottom: 0;
@@ -171,6 +244,11 @@ ul {
     text-align: left;
     margin-bottom: 15px;
     max-width: 500px;
+    cursor: pointer;
+    transition: opacity 0.25s ease-in-out;
+    &:hover {
+      opacity: 0.5;
+    }
   }
 }
 .btn {
